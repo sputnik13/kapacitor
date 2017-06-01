@@ -42,6 +42,22 @@ func (w *WindowNode) runWindow([]byte) error {
 	}
 	w.statMap.Set(statCardinalityGauge, expvar.NewIntFuncGauge(valueF))
 
+	if w.w.ForceEmitFlag {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		go func() error {
+			for {
+				select {
+				//case <-s.closing:
+				//	return nil
+				case <-ticker.C:
+					w.ins[0].Interrupt()
+				}
+			}
+		}()
+	}
+
 	// Loops through points windowing by group
 	for p, ok := w.ins[0].NextPoint(); ok; p, ok = w.ins[0].NextPoint() {
 		w.timer.Start()
@@ -164,25 +180,40 @@ func newWindowByTime(
 }
 
 func (w *windowByTime) Insert(p models.Point) (b models.Batch, ok bool) {
+	var now time.Time
+	interrupted := p.Time.IsZero()
+
+	if interrupted {
+		// got interrupt, emit window if current time is > 2 w.every past next emit
+		now = time.Now()
+		if now.Add(-2 * w.every).Before(w.nextEmit) {
+			return
+		}
+	} else {
+		now = p.Time
+	}
+
 	if w.every == 0 {
 		// Insert point before.
-		w.buf.insert(p)
+		if !interrupted {
+			w.buf.insert(p)
+		}
 		// Since we are emitting every point we can use a right aligned window (oldest, now]
-		if !p.Time.Before(w.nextEmit) {
+		if !now.Before(w.nextEmit) {
 			// purge old points
-			oldest := p.Time.Add(-1 * w.period)
+			oldest := now.Add(-1 * w.period)
 			w.buf.purge(oldest, false)
 
 			// get current batch
-			b = w.batch(p.Time)
+			b = w.batch(now)
 			ok = true
 
 			// Next emit time is now
-			w.nextEmit = p.Time
+			w.nextEmit = now
 		}
 	} else {
 		// Since more points can arrive with the same time we need to use a left aligned window [oldest, now).
-		if !p.Time.Before(w.nextEmit) {
+		if !now.Before(w.nextEmit) {
 			// purge old points
 			oldest := w.nextEmit.Add(-1 * w.period)
 			w.buf.purge(oldest, true)
@@ -193,13 +224,15 @@ func (w *windowByTime) Insert(p models.Point) (b models.Batch, ok bool) {
 
 			// Determine next emit time.
 			// This is dependent on the current time not the last time we emitted.
-			w.nextEmit = p.Time.Add(w.every)
+			w.nextEmit = now.Add(w.every)
 			if w.align {
 				w.nextEmit = w.nextEmit.Truncate(w.every)
 			}
 		}
 		// Insert point after.
-		w.buf.insert(p)
+		if !interrupted {
+			w.buf.insert(p)
+		}
 	}
 	return
 }

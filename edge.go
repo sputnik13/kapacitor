@@ -39,6 +39,7 @@ type Edge struct {
 	batch  chan models.Batch
 
 	logger     *log.Logger
+	interrupt  chan bool
 	aborted    chan struct{}
 	statsKey   string
 	collected  *expvar.Int
@@ -65,6 +66,7 @@ func newEdge(taskName, parentName, childName string, t pipeline.EdgeType, size i
 		statMap:    sm,
 		collected:  collected,
 		emitted:    emitted,
+		interrupt:  make(chan bool),
 		aborted:    make(chan struct{}),
 		groupStats: make(map[models.GroupID]*edgeStat),
 	}
@@ -145,6 +147,12 @@ func (e *Edge) Abort() {
 	)
 }
 
+// Interrupt the edge receiver to break it out of the blocking 'next' call
+// Items in flight may or may not be processed.
+func (e *Edge) Interrupt() {
+	e.interrupt <- true
+}
+
 func (e *Edge) Next() (p models.PointInterface, ok bool) {
 	if e.stream != nil {
 		return e.NextPoint()
@@ -154,6 +162,7 @@ func (e *Edge) Next() (p models.PointInterface, ok bool) {
 
 func (e *Edge) NextPoint() (p models.Point, ok bool) {
 	select {
+	case ok = <-e.interrupt:
 	case <-e.aborted:
 	case p, ok = <-e.stream:
 		if ok {
@@ -166,6 +175,7 @@ func (e *Edge) NextPoint() (p models.Point, ok bool) {
 
 func (e *Edge) NextBatch() (b models.Batch, ok bool) {
 	select {
+	case <-e.interrupt:
 	case <-e.aborted:
 	case b, ok = <-e.batch:
 		if ok {

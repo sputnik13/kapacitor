@@ -47,6 +47,10 @@ type WindowNode struct {
 	// EveryCount determines how often the window is emitted based on the count of points.
 	// A value of 1 means that every new point will emit the window.
 	EveryCount int64
+
+	// Force window edges to be emitted when there are no events for 2 'every' durations.
+	// tick:ignore
+	ForceEmitFlag bool `tick:"ForceEmit"`
 }
 
 func newWindowNode() *WindowNode {
@@ -72,6 +76,13 @@ func (w *WindowNode) Align() *WindowNode {
 // tick:property
 func (w *WindowNode) FillPeriod() *WindowNode {
 	w.FillPeriodFlag = true
+	return w
+}
+
+// If the `forceEmit` property is set, a window is emitted when there are no events for > 2 'every' durations.
+// tick:property
+func (w *WindowNode) ForceEmit() *WindowNode {
+	w.ForceEmitFlag = true
 	return w
 }
 
