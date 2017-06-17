@@ -8809,6 +8809,626 @@ stream
 	}
 }
 
+func TestStream_AlertGroupBy(t *testing.T) {
+
+	requestCount := int32(0)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ad := alert.Data{}
+		dec := json.NewDecoder(r.Body)
+		err := dec.Decode(&ad)
+		if err != nil {
+			t.Fatal(err)
+		}
+		atomic.AddInt32(&requestCount, 1)
+		var expAd alert.Data
+		rc := atomic.LoadInt32(&requestCount)
+		switch rc {
+		case 1:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu0",
+				Message:  "kapacitor/localhost/cpu0 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu0"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 2:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu1",
+				Message:  "kapacitor/localhost/cpu1 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu1"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 3:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu2",
+				Message:  "kapacitor/localhost/cpu2 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 1, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu2"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 1, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 4:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu3",
+				Message:  "kapacitor/localhost/cpu3 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 2, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu3"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 2, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 5:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu0",
+				Message:  "kapacitor/localhost/cpu0 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 3, 0, time.UTC),
+				Duration: 3 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu0"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 3, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 6:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu0",
+				Message:  "kapacitor/localhost/cpu0 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu0"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 7:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu1",
+				Message:  "kapacitor/localhost/cpu1 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+				Duration: 4 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu1"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 8:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu1",
+				Message:  "kapacitor/localhost/cpu1 is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 5, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu1"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 5, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 9:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu-total",
+				Message:  "kapacitor/localhost/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 5, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 5, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 10:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu0",
+				Message:  "kapacitor/localhost/cpu0 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+				Duration: 2 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu0"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 11:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu1",
+				Message:  "kapacitor/localhost/cpu1 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+				Duration: 1 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu1"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 12:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu2",
+				Message:  "kapacitor/localhost/cpu2 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+				Duration: 5 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu2"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 13:
+			expAd = alert.Data{
+				ID:       "kapacitor/localhost/cpu3",
+				Message:  "kapacitor/localhost/cpu3 is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+				Duration: 4 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "localhost", "cpu": "cpu3"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 6, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		}
+		if eq, msg := compareAlertData(expAd, ad); !eq {
+			t.Errorf("unexpected alert data for request: %d %s", rc, msg)
+		}
+	}))
+	defer ts.Close()
+
+	var script = `
+stream
+    |from()
+        .measurement('cpu')
+        .groupBy('host','cpu')
+    |alert()
+		.id('kapacitor/{{ index .Tags "host" }}/{{ index .Tags "cpu" }}')
+		.details('details')
+		.idField('id')
+		.idTag('id')
+		.levelField('level')
+		.messageField('msg')
+		.levelTag('level')
+		.stateChangesOnly()
+        .crit(lambda: "usage_user" > 30)
+		.post('` + ts.URL + `')
+`
+
+	//// Expected Stats
+	//es := map[string]map[string]interface{}{
+	//	"stream0": map[string]interface{}{
+	//		"avg_exec_time_ns":    int64(0),
+	//		"errors":              int64(0),
+	//		"working_cardinality": int64(0),
+	//		"collected":           int64(90),
+	//		"emitted":             int64(90),
+	//	},
+	//	"from1": map[string]interface{}{
+	//		"avg_exec_time_ns":    int64(0),
+	//		"errors":              int64(0),
+	//		"working_cardinality": int64(0),
+	//		"collected":           int64(90),
+	//		"emitted":             int64(90),
+	//	},
+	//	"alert2": map[string]interface{}{
+	//		"emitted":             int64(0),
+	//		"working_cardinality": int64(9),
+	//		"avg_exec_time_ns":    int64(0),
+	//		"errors":              int64(0),
+	//		"collected":           int64(90),
+	//		"warns_triggered":     int64(0),
+	//		"crits_triggered":     int64(0),
+	//		"alerts_triggered":    int64(0),
+	//		"oks_triggered":       int64(0),
+	//		"infos_triggered":     int64(0),
+	//	},
+	//}
+
+	testStreamerNoOutput(t, "TestStream_AlertGroupBy", script, 13*time.Second, nil)
+}
+
+func TestStream_AlertGroupByHost(t *testing.T) {
+
+	requestCount := int32(0)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ad := alert.Data{}
+		dec := json.NewDecoder(r.Body)
+		err := dec.Decode(&ad)
+		if err != nil {
+			t.Fatal(err)
+		}
+		atomic.AddInt32(&requestCount, 1)
+		var expAd alert.Data
+		rc := atomic.LoadInt32(&requestCount)
+		switch rc {
+		case 1:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverA/cpu-total",
+				Message:  "kapacitor/serverA/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverA", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 2:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverB/cpu-total",
+				Message:  "kapacitor/serverB/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 1, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverB", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 1, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 3:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverC/cpu-total",
+				Message:  "kapacitor/serverC/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverC", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 4, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 4:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverA/cpu-total",
+				Message:  "kapacitor/serverA/cpu-total is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 7, 0, time.UTC),
+				Duration: 7 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverA", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 7, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 5:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverA/cpu-total",
+				Message:  "kapacitor/serverA/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 8, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverA", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 8, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 6:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverD/cpu-total",
+				Message:  "kapacitor/serverD/cpu-total is CRITICAL",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 9, 0, time.UTC),
+				Duration: 0,
+				Level:    alert.Critical,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverD", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 9, 0, time.UTC),
+								30.1,
+							}},
+						},
+					},
+				},
+			}
+		case 7:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverA/cpu-total",
+				Message:  "kapacitor/serverA/cpu-total is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 10, 0, time.UTC),
+				Duration: 2 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverA", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 10, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 8:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverB/cpu-total",
+				Message:  "kapacitor/serverB/cpu-total is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 11, 0, time.UTC),
+				Duration: 10 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverB", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 11, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 9:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverC/cpu-total",
+				Message:  "kapacitor/serverC/cpu-total is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 12, 0, time.UTC),
+				Duration: 8 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverC", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 12, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		case 10:
+			expAd = alert.Data{
+				ID:       "kapacitor/serverD/cpu-total",
+				Message:  "kapacitor/serverD/cpu-total is OK",
+				Details:  "details",
+				Time:     time.Date(1971, 1, 1, 0, 0, 13, 0, time.UTC),
+				Duration: 4 * time.Second,
+				Level:    alert.OK,
+				Data: models.Result{
+					Series: models.Rows{
+						{
+							Name:    "cpu",
+							Tags:    map[string]string{"host": "serverD", "cpu": "cpu-total"},
+							Columns: []string{"time", "usage_user"},
+							Values: [][]interface{}{[]interface{}{
+								time.Date(1971, 1, 1, 0, 0, 13, 0, time.UTC),
+								20.1,
+							}},
+						},
+					},
+				},
+			}
+		}
+		if eq, msg := compareAlertData(expAd, ad); !eq {
+			t.Errorf("unexpected alert data for request: %d %s", rc, msg)
+		}
+	}))
+	defer ts.Close()
+
+	var script = `
+stream
+    |from()
+        .measurement('cpu')
+        .groupBy('host','cpu')
+    |alert()
+		.id('kapacitor/{{ index .Tags "host" }}/{{ index .Tags "cpu" }}')
+		.details('details')
+		.idField('id')
+		.idTag('id')
+		.levelField('level')
+		.messageField('msg')
+		.levelTag('level')
+		.stateChangesOnly()
+        .crit(lambda: "usage_user" > 30)
+		.post('` + ts.URL + `')
+`
+
+	testStreamerNoOutput(t, "TestStream_AlertGroupByHost", script, 15*time.Second, nil)
+}
+
 func TestStream_K8sAutoscale(t *testing.T) {
 	var script = `
 stream
